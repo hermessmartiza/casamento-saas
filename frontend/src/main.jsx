@@ -12,6 +12,7 @@ import AdminBudget from './pages/AdminBudget';
 import AdminTimeline from './pages/AdminTimeline';
 import RsvpPage from './pages/RsvpPage';
 import AdminLayout from './components/AdminLayout';
+import AdminSections from './pages/AdminSections';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="vendors" element={<AdminVendors />} />
           <Route path="budget" element={<AdminBudget />} />
           <Route path="timeline" element={<AdminTimeline />} />
+          <Route path="sections" element={<AdminSections />} />
         </Route>
       </Routes>
     </BrowserRouter>

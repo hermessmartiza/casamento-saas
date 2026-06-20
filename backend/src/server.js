@@ -7,6 +7,7 @@ import vendorRoutes from './routes/vendors.js';
 import budgetRoutes from './routes/budget.js';
 import timelineRoutes from './routes/timeline.js';
 import giftRoutes from './routes/gifts.js';
+import sectionRoutes from './routes/sections.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,6 +21,7 @@ app.use('/api/vendors', vendorRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/timeline', timelineRoutes);
 app.use('/api/gifts', giftRoutes);
+app.use('/api/sections', sectionRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

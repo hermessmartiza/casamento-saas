@@ -19,6 +19,7 @@ export default function AdminLayout() {
     { path: `/${slug}/admin/vendors`, label: 'Fornecedores', icon: '🤝' },
     { path: `/${slug}/admin/budget`, label: 'Orçamento', icon: '💰' },
     { path: `/${slug}/admin/timeline`, label: 'Cronograma', icon: '📅' },
+    { path: `/${slug}/admin/sections`, label: 'Editor do Site', icon: '🎨' },
   ];
 
   return (
