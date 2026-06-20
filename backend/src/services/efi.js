@@ -24,17 +24,17 @@ async function getToken(clientId, clientSecret, weddingId, sandbox) {
   const body = JSON.stringify({ grant_type: 'client_credentials' });
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const resp = await fetch(`${url}/oauth/token`, {
+  const resp = await efifetch(`${url}/oauth/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Basic ${auth}`,
     },
     body,
-  });
+  }, weddingId, sandbox);
 
-  const data = await resp.json();
-  if (data.error) throw new Error(`EFI auth failed: ${data.error_description || data.error}`);
+  const data = resp.data;
+  if (data?.error) throw new Error(`EFI auth failed: ${data.error_description || data.error}`);
 
   cachedToken = data.access_token;
   tokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
@@ -111,7 +111,10 @@ export async function generatePix(wedding, amount, txid) {
     body,
   }, wedding.id, sandbox);
 
-  if (resp.status >= 400) throw new Error(resp.data?.error || `EFI error ${resp.status}`);
+  if (resp.status >= 400) {
+    const errBody = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+    throw new Error(`EFI error ${resp.status}: ${errBody.substring(0, 200)}`);
+  }
 
   const data = resp.data;
   if (data.loc?.id) {

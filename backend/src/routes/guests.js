@@ -148,7 +148,9 @@ router.post('/self-register/:slug', async (req, res) => {
 
     // Generate PIX
     try {
-      const pix = await generatePix(wedding, totalAmount, guest.id);
+      // EFI requires txid: 26-35 alphanumeric chars. CUID is 25, so pad it.
+      const txid = guest.id + 'x'; // 25 + 1 = 26 chars
+      const pix = await generatePix(wedding, totalAmount, txid);
       await prisma.guest.update({
         where: { id: guest.id },
         data: { txid: pix.txid },
