@@ -4,16 +4,37 @@ import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
-// Público: listar convidados (se site público)
+// Público: buscar convidado por nome ou ID
 router.get('/public/:slug', async (req, res) => {
   try {
     const wedding = await prisma.wedding.findUnique({ where: { slug: req.params.slug } });
     if (!wedding || !wedding.isPublic) return res.status(404).json({ error: 'Not found' });
-    const guests = await prisma.guest.findMany({
-      where: { weddingId: wedding.id },
-      orderBy: { name: 'asc' },
-    });
-    res.json(guests);
+
+    const { name, guestId } = req.query;
+
+    // Busca por ID específico (link direto)
+    if (guestId) {
+      const guest = await prisma.guest.findFirst({
+        where: { id: guestId, weddingId: wedding.id },
+      });
+      if (!guest) return res.status(404).json({ error: 'Guest not found' });
+      return res.json(guest);
+    }
+
+    // Busca por nome (parcial, case insensitive)
+    if (name) {
+      const guests = await prisma.guest.findMany({
+        where: {
+          weddingId: wedding.id,
+          name: { contains: name, mode: 'insensitive' },
+        },
+        orderBy: { name: 'asc' },
+        take: 10,
+      });
+      return res.json(guests);
+    }
+
+    res.json([]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

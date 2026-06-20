@@ -5,6 +5,35 @@ import { generateToken, authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
+// Público: criar novo casamento (registro self-service)
+router.post('/register', async (req, res) => {
+  try {
+    const { slug, coupleName, partner1Name, partner2Name, password } = req.body;
+    if (!slug || !coupleName || !partner1Name || !partner2Name || !password) {
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    }
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'Senha deve ter pelo menos 4 caracteres' });
+    }
+
+    const existing = await prisma.wedding.findUnique({ where: { slug } });
+    if (existing) return res.status(409).json({ error: 'Este nome já está em uso' });
+
+    const adminPassword = await bcrypt.hash(password, 10);
+    const wedding = await prisma.wedding.create({
+      data: { slug, coupleName, partner1Name, partner2Name, adminPassword },
+    });
+
+    const token = generateToken(wedding.id);
+    res.status(201).json({
+      token,
+      wedding: { id: wedding.id, slug: wedding.slug, coupleName: wedding.coupleName },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Público: busca casamento por slug (site público)
 router.get('/public/:slug', async (req, res) => {
   try {
@@ -13,7 +42,7 @@ router.get('/public/:slug', async (req, res) => {
       select: {
         id: true, slug: true, coupleName: true, partner1Name: true, partner2Name: true,
         weddingDate: true, location: true, description: true, primaryColor: true,
-        accentColor: true, logo: true, coverImage: true, isPublic: true,
+        accentColor: true, logo: true, coverImage: true, isPublic: true, pixKey: true,
       },
     });
     if (!wedding) return res.status(404).json({ error: 'Wedding not found' });
@@ -60,7 +89,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 router.patch('/me', authMiddleware, async (req, res) => {
   try {
     const allowed = ['coupleName', 'partner1Name', 'partner2Name', 'weddingDate',
-      'location', 'description', 'primaryColor', 'accentColor', 'logo', 'coverImage', 'isPublic'];
+      'location', 'description', 'primaryColor', 'accentColor', 'logo', 'coverImage', 'isPublic', 'pixKey'];
     const data = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) data[key] = req.body[key];

@@ -45,10 +45,18 @@ export default function PublicPage() {
         {wedding.description && (
           <p className="text-lg text-gray-700 leading-relaxed text-center">{wedding.description}</p>
         )}
-        <div className="mt-12 text-center">
+        <div className="mt-12 text-center space-y-4">
+          <a
+            href={`/${slug}/rsvp`}
+            className="inline-block px-8 py-4 rounded-full text-white font-medium text-lg shadow-lg hover:shadow-xl transition"
+            style={{ backgroundColor: wedding.primaryColor }}
+          >
+            ✨ Confirmar Presença
+          </a>
+          <br />
           <a
             href={`/${slug}/admin/login`}
-            className="inline-block px-6 py-3 rounded-full text-white font-medium"
+            className="inline-block px-6 py-3 rounded-full text-white font-medium text-sm opacity-80 hover:opacity-100"
             style={{ backgroundColor: wedding.primaryColor }}
           >
             Área dos Noivos
