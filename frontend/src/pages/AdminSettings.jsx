@@ -36,15 +36,19 @@ export default function AdminSettings() {
   }, []);
 
   const handleSave = async () => {
-    const data = {
-      ...form,
-      pricePerGuest: form.pricePerGuest ? parseFloat(form.pricePerGuest) : null,
-      pricePerChild: form.pricePerChild ? parseFloat(form.pricePerChild) : null,
-    };
-    if (data.weddingDate) data.weddingDate = new Date(data.weddingDate).toISOString();
-    await api.patch('/wedding/me', data);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const data = {
+        ...form,
+        pricePerGuest: form.pricePerGuest ? parseFloat(form.pricePerGuest) : null,
+        pricePerChild: form.pricePerChild ? parseFloat(form.pricePerChild) : null,
+      };
+      if (data.weddingDate) data.weddingDate = new Date(data.weddingDate).toISOString();
+      await api.patch('/wedding/me', data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      alert('Erro ao salvar: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const handleCertUpload = async (e) => {
@@ -171,6 +175,14 @@ export default function AdminSettings() {
             <p className="text-xs text-gray-400 mt-2">Obrigatório para produção (sandbox não precisa).</p>
           </div>
         </div>
+      </div>
+
+      {/* Bottom save button */}
+      <div className="mt-8 text-center">
+        <button onClick={handleSave}
+          className="px-8 py-3 bg-amber-700 text-white rounded-xl text-lg font-medium hover:bg-amber-800 shadow-lg transition">
+          {saved ? '✅ Salvo com sucesso!' : '💾 Salvar todas as alterações'}
+        </button>
       </div>
     </div>
   );
