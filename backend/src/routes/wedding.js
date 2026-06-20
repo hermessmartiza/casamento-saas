@@ -99,7 +99,11 @@ router.patch('/me', authMiddleware, async (req, res) => {
     for (const key of allowed) {
       if (req.body[key] !== undefined) data[key] = req.body[key];
     }
-    if (req.body.weddingDate) data.weddingDate = new Date(req.body.weddingDate);
+    if (data.weddingDate === '' || data.weddingDate === null) {
+      data.weddingDate = null;
+    } else if (data.weddingDate) {
+      data.weddingDate = new Date(data.weddingDate);
+    }
     const wedding = await prisma.wedding.update({
       where: { id: req.weddingId },
       data,

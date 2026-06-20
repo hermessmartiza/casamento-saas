@@ -41,6 +41,7 @@ export default function AdminSettings() {
         ...form,
         pricePerGuest: form.pricePerGuest ? parseFloat(form.pricePerGuest) : null,
         pricePerChild: form.pricePerChild ? parseFloat(form.pricePerChild) : null,
+        weddingDate: form.weddingDate || null,
       };
       if (data.weddingDate) data.weddingDate = new Date(data.weddingDate).toISOString();
       await api.patch('/wedding/me', data);
