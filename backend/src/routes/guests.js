@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { generatePix, checkPixStatus } from '../services/efi.js';
 
 const router = Router();
 
@@ -104,6 +105,109 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       where: { id: req.params.id, weddingId: req.weddingId },
     });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Público: auto-registro com pagamento
+router.post('/self-register/:slug', async (req, res) => {
+  try {
+    const wedding = await prisma.wedding.findUnique({ where: { slug: req.params.slug } });
+    if (!wedding || !wedding.isPublic) return res.status(404).json({ error: 'Not found' });
+
+    const { name, email, phone, adultCount, childCount, dietaryRestrictions } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+
+    const adults = parseInt(adultCount) || 1;
+    const children = parseInt(childCount) || 0;
+    const pricePerGuest = wedding.pricePerGuest || 0;
+    const pricePerChild = wedding.pricePerChild || 0;
+    const totalAmount = (adults * pricePerGuest) + (children * pricePerChild);
+
+    // Create guest record
+    const guest = await prisma.guest.create({
+      data: {
+        weddingId: wedding.id,
+        name,
+        email: email || null,
+        phone: phone || null,
+        adultCount: adults,
+        childCount: children,
+        dietaryRestrictions: dietaryRestrictions || null,
+        rsvpStatus: 'CONFIRMED',
+        paymentStatus: totalAmount > 0 ? 'PENDING' : 'PAID',
+        paymentAmount: totalAmount,
+      },
+    });
+
+    // If free, done
+    if (totalAmount <= 0) {
+      return res.status(201).json({ guest, paymentRequired: false });
+    }
+
+    // Generate PIX
+    try {
+      const pix = await generatePix(wedding, totalAmount, guest.id);
+      await prisma.guest.update({
+        where: { id: guest.id },
+        data: { txid: pix.txid },
+      });
+      return res.status(201).json({
+        guest,
+        paymentRequired: true,
+        pix,
+        amount: totalAmount,
+      });
+    } catch (pixErr) {
+      // PIX failed but guest is created - they can pay later
+      console.error('PIX generation failed:', pixErr.message);
+      return res.status(201).json({
+        guest,
+        paymentRequired: true,
+        pixError: pixErr.message,
+        amount: totalAmount,
+      });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Público: verificar status do pagamento
+router.get('/check-payment/:guestId', async (req, res) => {
+  try {
+    const guest = await prisma.guest.findUnique({
+      where: { id: req.params.guestId },
+      include: { wedding: true },
+    });
+    if (!guest) return res.status(404).json({ error: 'Not found' });
+
+    if (guest.paymentStatus === 'PAID') {
+      return res.json({ status: 'PAID', guest });
+    }
+
+    if (!guest.txid) {
+      return res.json({ status: 'PENDING', message: 'Aguardando pagamento' });
+    }
+
+    try {
+      const pixStatus = await checkPixStatus(guest.wedding, guest.txid);
+      if (pixStatus.status === 'CONCLUIDA') {
+        await prisma.guest.update({
+          where: { id: guest.id },
+          data: {
+            paymentStatus: 'PAID',
+            paymentMethod: 'PIX',
+            paidAt: pixStatus.paidAt ? new Date(pixStatus.paidAt) : new Date(),
+          },
+        });
+        return res.json({ status: 'PAID', guest: { ...guest, paymentStatus: 'PAID' } });
+      }
+      return res.json({ status: pixStatus.status || 'PENDING' });
+    } catch {
+      return res.json({ status: 'PENDING', message: 'Verificando...' });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

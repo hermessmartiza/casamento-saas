@@ -89,7 +89,8 @@ router.get('/me', authMiddleware, async (req, res) => {
 router.patch('/me', authMiddleware, async (req, res) => {
   try {
     const allowed = ['coupleName', 'partner1Name', 'partner2Name', 'weddingDate',
-      'location', 'description', 'primaryColor', 'accentColor', 'logo', 'coverImage', 'isPublic', 'pixKey'];
+      'location', 'description', 'primaryColor', 'accentColor', 'logo', 'coverImage', 'isPublic', 'pixKey',
+      'pricePerGuest', 'pricePerChild', 'efiClientId', 'efiClientSecret', 'efiPixKey', 'efiSandbox'];
     const data = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) data[key] = req.body[key];

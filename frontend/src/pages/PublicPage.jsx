@@ -147,12 +147,22 @@ export default function PublicPage() {
 
       {/* CTA buttons - always show */}
       <div className="text-center py-12 px-4 space-y-4">
-        <a href={`/${slug}/rsvp`}
+        <a href={`/${slug}/register`}
           className="inline-block px-8 py-4 rounded-full text-white font-medium text-lg shadow-lg hover:shadow-xl transition"
           style={{ backgroundColor: wedding.primaryColor }}>
-          ✨ Confirmar Presença
+          ✨ Confirmar Presença{wedding.pricePerGuest > 0 ? ` (R$ ${wedding.pricePerGuest.toFixed(2)}/pessoa)` : ''}
         </a>
         <br />
+        {wedding.pricePerGuest <= 0 && (
+          <>
+            <a href={`/${slug}/rsvp`}
+              className="inline-block px-6 py-3 rounded-full text-white font-medium text-sm opacity-70 hover:opacity-100"
+              style={{ backgroundColor: wedding.primaryColor }}>
+              Buscar meu nome na lista
+            </a>
+            <br />
+          </>
+        )}
         <a href={`/${slug}/admin/login`}
           className="inline-block px-6 py-3 rounded-full text-white font-medium text-sm opacity-70 hover:opacity-100"
           style={{ backgroundColor: wedding.primaryColor }}>

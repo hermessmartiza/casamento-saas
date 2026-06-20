@@ -12,7 +12,9 @@ import AdminBudget from './pages/AdminBudget';
 import AdminTimeline from './pages/AdminTimeline';
 import RsvpPage from './pages/RsvpPage';
 import AdminLayout from './components/AdminLayout';
+import SelfRegisterPage from './pages/SelfRegisterPage';
 import AdminSections from './pages/AdminSections';
+import AdminSettings from './pages/AdminSettings';
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/:slug" element={<PublicPage />} />
         <Route path="/:slug/rsvp" element={<RsvpPage />} />
+        <Route path="/:slug/register" element={<SelfRegisterPage />} />
         <Route path="/:slug/admin/login" element={<AdminLogin />} />
         <Route path="/:slug/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -29,6 +32,7 @@ function App() {
           <Route path="budget" element={<AdminBudget />} />
           <Route path="timeline" element={<AdminTimeline />} />
           <Route path="sections" element={<AdminSections />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
     </BrowserRouter>
