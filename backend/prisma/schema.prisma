@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Wedding {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  coupleName    String
+  partner1Name  String
+  partner2Name  String
+  weddingDate   DateTime?
+  location      String?
+  description   String?
+  primaryColor  String   @default("#6D4720")
+  accentColor   String   @default("#8B6535")
+  logo          String?
+  coverImage    String?
+  isPublic      Boolean  @default(true)
+  adminPassword String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  guests        Guest[]
+  vendors       Vendor[]
+  budgetItems   BudgetItem[]
+  timelineTasks TimelineTask[]
+}
+
+model Guest {
+  id                  String   @id @default(cuid())
+  weddingId           String
+  wedding             Wedding  @relation(fields: [weddingId], references: [id])
+  name                String
+  email               String?
+  phone               String?
+  side                String   @default("BOTH")
+  category            String   @default("FRIEND")
+  rsvpStatus          String   @default("PENDING")
+  plusOne             Boolean  @default(false)
+  plusOneName         String?
+  tableNumber         Int?
+  dietaryRestrictions String?
+  invitedToCeremony   Boolean  @default(true)
+  invitedToReception  Boolean  @default(true)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Vendor {
+  id            String   @id @default(cuid())
+  weddingId     String
+  wedding       Wedding  @relation(fields: [weddingId], references: [id])
+  name          String
+  category      String   @default("OTHER")
+  contactName   String?
+  email         String?
+  phone         String?
+  website       String?
+  contractValue Float    @default(0)
+  paidAmount    Float    @default(0)
+  paymentStatus String   @default("PENDING")
+  notes         String?
+  rating        Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  budgetItems   BudgetItem[]
+}
+
+model BudgetItem {
+  id              String   @id @default(cuid())
+  weddingId       String
+  wedding         Wedding  @relation(fields: [weddingId], references: [id])
+  category        String   @default("OTHER")
+  description     String
+  estimatedAmount Float    @default(0)
+  actualAmount    Float    @default(0)
+  isPaid          Boolean  @default(false)
+  paidDate        DateTime?
+  vendorId        String?
+  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model TimelineTask {
+  id          String    @id @default(cuid())
+  weddingId   String
+  wedding     Wedding   @relation(fields: [weddingId], references: [id])
+  title       String
+  description String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  status      String    @default("PENDING")
+  category    String    @default("BEFORE_WEDDING")
+  priority    String    @default("MEDIUM")
+  assignedTo  String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

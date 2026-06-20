@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bolo
+      POSTGRES_PASSWORD: bolo_system
+      POSTGRES_DB: casamento_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://bolo:bolo_system@db:5432/casamento_saas
+      JWT_SECRET: casamento-saas-secret-dev
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
