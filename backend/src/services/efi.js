@@ -1,19 +1,30 @@
 import https from 'https';
+import fs from 'fs';
+import path from 'path';
 
-const EFI_BASE = process.env.EFI_BASE || 'https://pix.api.efipay.com.br';
+const EFI_BASE = 'https://pix.api.efipay.com.br';
 const EFI_SANDBOX_BASE = 'https://pix-h.api.efipay.com.br';
 
 let cachedToken = null;
 let tokenExpiresAt = 0;
 
-async function getToken(clientId, clientSecret, sandbox) {
+function getCertPath(weddingId) {
+  const certDir = process.env.CERTS_DIR || '/app/certs';
+  return path.join(certDir, `${weddingId}.p12`);
+}
+
+function certExists(weddingId) {
+  return fs.existsSync(getCertPath(weddingId));
+}
+
+async function getToken(clientId, clientSecret, weddingId, sandbox) {
   if (cachedToken && Date.now() < tokenExpiresAt) return cachedToken;
 
-  const base = sandbox ? EFI_SANDBOX_BASE : EFI_BASE;
+  const url = sandbox ? EFI_SANDBOX_BASE : EFI_BASE;
   const body = JSON.stringify({ grant_type: 'client_credentials' });
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const resp = await fetch(`${base}/oauth/token`, {
+  const resp = await fetch(`${url}/oauth/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -30,7 +41,42 @@ async function getToken(clientId, clientSecret, sandbox) {
   return cachedToken;
 }
 
-// Generate PIX QR code
+function efifetch(url, options, weddingId, sandbox) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const reqOpts = {
+      hostname: u.hostname,
+      port: 443,
+      path: u.pathname + u.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      rejectUnauthorized: true,
+    };
+
+    // Use certificate for non-sandbox
+    if (!sandbox && certExists(weddingId)) {
+      reqOpts.pfx = fs.readFileSync(getCertPath(weddingId));
+      reqOpts.passphrase = '';
+    }
+
+    const req = https.request(reqOpts, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(body) });
+        } catch {
+          resolve({ status: res.statusCode, data: body });
+        }
+      });
+    });
+
+    req.on('error', reject);
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 export async function generatePix(wedding, amount, txid) {
   const clientId = wedding.efiClientId || process.env.EFI_CLIENT_ID;
   const clientSecret = wedding.efiClientSecret || process.env.EFI_CLIENT_SECRET;
@@ -41,7 +87,11 @@ export async function generatePix(wedding, amount, txid) {
     throw new Error('EFI Pay não configurado. Configure no painel admin.');
   }
 
-  const token = await getToken(clientId, clientSecret, sandbox);
+  if (!sandbox && !certExists(wedding.id)) {
+    throw new Error('Certificado .p12 não encontrado. Faça upload no painel admin.');
+  }
+
+  const token = await getToken(clientId, clientSecret, wedding.id, sandbox);
   const base = sandbox ? EFI_SANDBOX_BASE : EFI_BASE;
 
   const body = JSON.stringify({
@@ -52,51 +102,53 @@ export async function generatePix(wedding, amount, txid) {
     txid,
   });
 
-  const resp = await fetch(`${base}/v2/cob/${txid}`, {
+  const resp = await efifetch(`${base}/v2/cob/${txid}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
     body,
-  });
+  }, wedding.id, sandbox);
 
-  const data = await resp.json();
+  if (resp.status >= 400) throw new Error(resp.data?.error || `EFI error ${resp.status}`);
 
-  // Generate QR code
+  const data = resp.data;
   if (data.loc?.id) {
-    const qrResp = await fetch(`${base}/v2/loc/${data.loc.id}/qrcode`, {
+    const qrResp = await efifetch(`${base}/v2/loc/${data.loc.id}/qrcode`, {
       headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const qrData = await qrResp.json();
+    }, wedding.id, sandbox);
     return {
       txid,
       pixCode: data.pixCopiaECola || '',
-      qrcode: qrData.imagemQrcode || '',
-      expiresAt: data.calendario?.criacao ? new Date(new Date(data.calendario.criacao).getTime() + 3600000).toISOString() : null,
+      qrcode: qrResp.data?.imagemQrcode || '',
+      expiresAt: data.calendario?.criacao
+        ? new Date(new Date(data.calendario.criacao).getTime() + 3600000).toISOString()
+        : null,
     };
   }
 
-  throw new Error(data.error || 'Falha ao gerar PIX');
+  throw new Error('Falha ao gerar QR code PIX');
 }
 
-// Check PIX payment status
 export async function checkPixStatus(wedding, txid) {
   const clientId = wedding.efiClientId || process.env.EFI_CLIENT_ID;
   const clientSecret = wedding.efiClientSecret || process.env.EFI_CLIENT_SECRET;
   const sandbox = wedding.efiSandbox !== false;
 
-  const token = await getToken(clientId, clientSecret, sandbox);
+  const token = await getToken(clientId, clientSecret, wedding.id, sandbox);
   const base = sandbox ? EFI_SANDBOX_BASE : EFI_BASE;
 
-  const resp = await fetch(`${base}/v2/cob/${txid}`, {
+  const resp = await efifetch(`${base}/v2/cob/${txid}`, {
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }, wedding.id, sandbox);
 
-  const data = await resp.json();
+  const data = resp.data || {};
   return {
-    status: data.status, // ATIVA, CONCLUIDA, REMOVIDA_PELO_USUARIO_RECEBEDOR, REMOVIDA_PELO_PSP
+    status: data.status,
     txid: data.txid,
-    paidAt: data.historico?.find(h => h.status === 'CONCLUIDA')?.horario || null,
+    paidAt: (data.historico || []).find(h => h.status === 'CONCLUIDA')?.horario || null,
   };
 }
+
+export { certExists };

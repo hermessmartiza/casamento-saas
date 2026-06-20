@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import prisma from '../lib/prisma.js';
 import { generateToken, authMiddleware } from '../middleware/auth.js';
+import { certExists } from '../services/efi.js';
 
 const router = Router();
 
@@ -105,6 +109,40 @@ router.patch('/me', authMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Upload certificado .p12
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const dir = process.env.CERTS_DIR || '/app/certs';
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => cb(null, `${req.weddingId}.p12`),
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.endsWith('.p12') || file.originalname.endsWith('.pfx')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos .p12 ou .pfx'));
+    }
+  },
+  limits: { fileSize: 1024 * 1024 }, // 1MB
+});
+
+router.post('/cert', authMiddleware, upload.single('cert'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    res.json({ success: true, filename: req.file.filename });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verificar se certificado existe
+router.get('/cert-status', authMiddleware, (req, res) => {
+  res.json({ exists: certExists(req.weddingId) });
 });
 
 export default router;

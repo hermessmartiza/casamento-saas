@@ -6,6 +6,8 @@ export default function AdminSettings() {
   const [form, setForm] = useState({});
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [certExists, setCertExists] = useState(false);
+  const [certUploading, setCertUploading] = useState(false);
 
   useEffect(() => {
     api.get('/wedding/me').then(r => {
@@ -30,6 +32,7 @@ export default function AdminSettings() {
       });
       setLoading(false);
     });
+    api.get('/wedding/cert-status').then(r => setCertExists(r.data.exists)).catch(() => {});
   }, []);
 
   const handleSave = async () => {
@@ -42,6 +45,23 @@ export default function AdminSettings() {
     await api.patch('/wedding/me', data);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleCertUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setCertUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('cert', file);
+      await api.post('/wedding/cert', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setCertExists(true);
+    } catch (err) {
+      alert('Erro ao enviar certificado: ' + (err.response?.data?.error || err.message));
+    }
+    setCertUploading(false);
   };
 
   if (loading) return <div className="text-gray-400">Carregando...</div>;
@@ -136,6 +156,19 @@ export default function AdminSettings() {
               <input type="checkbox" checked={form.efiSandbox} onChange={e => setForm({...form, efiSandbox: e.target.checked})} />
               <span className="text-sm text-gray-600">Sandbox (testes)</span>
             </label>
+          </div>
+          <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+            <p className="text-sm font-medium text-gray-700 mb-2">📎 Certificado .p12</p>
+            <div className="flex items-center gap-3">
+              <label className={`px-4 py-2 rounded-xl text-sm cursor-pointer transition ${
+                certUploading ? 'bg-gray-300' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+              }`}>
+                {certUploading ? 'Enviando...' : certExists ? '🔄 Substituir' : '📤 Upload .p12'}
+                <input type="file" accept=".p12,.pfx" onChange={handleCertUpload} className="hidden" disabled={certUploading} />
+              </label>
+              {certExists && <span className="text-sm text-green-600">✅ Certificado instalado</span>}
+            </div>
+            <p className="text-xs text-gray-400 mt-2">Obrigatório para produção (sandbox não precisa).</p>
           </div>
         </div>
       </div>
