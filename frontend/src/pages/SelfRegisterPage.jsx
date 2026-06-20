@@ -90,12 +90,24 @@ export default function SelfRegisterPage() {
       <div className="max-w-lg mx-auto px-4 py-8">
         {step === 'done' ? (
           <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
-            <div className="text-5xl mb-4">✅</div>
-            <h2 className="text-xl font-serif mb-2">Presença Confirmada!</h2>
-            <p className="text-gray-500">{form.name}, sua presença foi registrada com sucesso.</p>
-            {form.adultCount > 1 && <p className="text-sm text-gray-400 mt-2">{form.adultCount} adultos</p>}
-            {form.childCount > 0 && <p className="text-sm text-gray-400">{form.childCount} criança(s)</p>}
-            <p className="text-sm text-gray-400 mt-4">Nos vemos no grande dia! 💒</p>
+            {error ? (
+              <>
+                <div className="text-5xl mb-4">⚠️</div>
+                <h2 className="text-xl font-serif mb-2">Registro pendente</h2>
+                <p className="text-gray-500 mb-2">{form.name}, você foi registrado mas o pagamento não foi processado.</p>
+                <p className="text-sm text-red-500 bg-red-50 rounded-xl p-3 mb-4">{error}</p>
+                <p className="text-xs text-gray-400">Os noivos precisam configurar o sistema de pagamento. Você será notificado quando estiver disponível.</p>
+              </>
+            ) : (
+              <>
+                <div className="text-5xl mb-4">✅</div>
+                <h2 className="text-xl font-serif mb-2">Presença Confirmada!</h2>
+                <p className="text-gray-500">{form.name}, sua presença foi registrada com sucesso.</p>
+                {form.adultCount > 1 && <p className="text-sm text-gray-400 mt-2">{form.adultCount} adultos</p>}
+                {form.childCount > 0 && <p className="text-sm text-gray-400">{form.childCount} criança(s)</p>}
+                <p className="text-sm text-gray-400 mt-4">Nos vemos no grande dia! 💒</p>
+              </>
+            )}
           </div>
         ) : step === 'payment' ? (
           <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
