@@ -129,6 +129,23 @@ export default function AdminSettings() {
           <p className="text-xs text-gray-400 mt-1">Aparece na página de confirmação de presença pros convidados presentearem.</p>
         </div>
 
+        {/* EFI warning */}
+        {(form.pricePerGuest > 0 || form.pricePerChild > 0) && (!form.efiClientId || !form.efiClientSecret || !form.efiPixKey) && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-6 mb-6">
+            <h2 className="text-lg font-bold text-red-700 mb-2">⚠️ Pagamento não configurado</h2>
+            <p className="text-sm text-red-600 mb-3">
+              Você definiu valor por pessoa mas <strong>não configurou o EFI Pay</strong>. Os convidados não conseguirão pagar.
+            </p>
+            <ol className="text-sm text-red-600 list-decimal pl-5 space-y-1">
+              <li>Acesse <a href="https://sejaefi.com.br" target="_blank" className="underline">sejaefi.com.br</a> e crie uma conta</li>
+              <li>No painel EFI, pegue o <strong>Client ID</strong> e <strong>Client Secret</strong></li>
+              <li>Cadastre uma <strong>Chave PIX</strong> no EFI</li>
+              <li>Marque ✅ <strong>Sandbox</strong> para testes (sem cobrança real)</li>
+              <li>Preencha abaixo e salve</li>
+            </ol>
+          </div>
+        )}
+
         {/* Pricing + EFI */}
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <h3 className="font-medium text-gray-700 mb-4">💰 Cobrança por Convidado</h3>

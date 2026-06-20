@@ -33,7 +33,8 @@ export default function SelfRegisterPage() {
           setAmount(data.amount);
           setStep('payment');
         } else {
-          setError(data.pixError || 'Erro ao gerar pagamento');
+          // PIX generation failed but guest was created
+          setError(data.pixError || 'Erro ao gerar pagamento. Os noivos precisam configurar o EFI Pay no painel admin.');
           setStep('done');
         }
       } else {
